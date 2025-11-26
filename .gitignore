@@ -1,0 +1,6 @@
+/target
+
+# Target directories in examples and example
+example/target/
+example/*/target/
+examples/*/target/

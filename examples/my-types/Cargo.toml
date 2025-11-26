@@ -1,0 +1,9 @@
+[package]
+name = "my-types"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+name = "my_types"
+path = "src/lib.rs"

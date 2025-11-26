@@ -1,0 +1,25 @@
+[package]
+name = "bronzite-daemon"
+version = "0.1.0"
+edition = "2024"
+description = "🔮 Background daemon for Bronzite compile-time reflection - caches rustc compilation for fast type queries"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/drewridley/bronzite"
+homepage = "https://github.com/drewridley/bronzite"
+documentation = "https://docs.rs/bronzite-daemon"
+readme = "../../README.md"
+keywords = ["reflection", "proc-macro", "compile-time", "type-system", "daemon"]
+categories = ["development-tools::procedural-macro-helpers", "rust-patterns"]
+authors = ["Drew Ridley"]
+
+[dependencies]
+bronzite-types = { path = "../bronzite-types", version = "0.1.0" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+clap = { version = "4.4", features = ["derive"] }
+log = "0.4"
+env_logger = "0.10"
+
+[[bin]]
+name = "bronzite-daemon"
+path = "src/main.rs"

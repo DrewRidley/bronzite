@@ -1,0 +1,13 @@
+[package]
+name = "my-app"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[[bin]]
+name = "my-app"
+path = "src/main.rs"
+
+[dependencies]
+my-types = { path = "../my-types" }
+my-macros = { path = "../my-macros" }

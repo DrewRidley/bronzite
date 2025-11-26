@@ -1,0 +1,15 @@
+[package]
+name = "my-macros"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+proc-macro = true
+
+[dependencies]
+bronzite-client = { path = "../../crates/bronzite-client" }
+bronzite-types = { path = "../../crates/bronzite-types" }
+proc-macro2 = "1.0"
+quote = "1.0"
+syn = { version = "2.0", features = ["full"] }

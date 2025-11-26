@@ -1,0 +1,23 @@
+[package]
+name = "bronzite-macros"
+version = "0.1.0"
+edition = "2024"
+description = "🔮 Proc-macros for Bronzite compile-time type reflection - inspect traits, fields, and methods at compile time"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/drewridley/bronzite"
+homepage = "https://github.com/drewridley/bronzite"
+documentation = "https://docs.rs/bronzite-macros"
+readme = "../../README.md"
+keywords = ["reflection", "proc-macro", "compile-time", "type-system", "introspection"]
+categories = ["development-tools::procedural-macro-helpers", "rust-patterns"]
+authors = ["Drew Ridley"]
+
+[lib]
+proc-macro = true
+
+[dependencies]
+bronzite-client = { path = "../bronzite-client", version = "0.1.0" }
+bronzite-types = { path = "../bronzite-types", version = "0.1.0" }
+proc-macro2 = "1.0"
+quote = "1.0"
+syn = { version = "2.0", features = ["full", "parsing"] }

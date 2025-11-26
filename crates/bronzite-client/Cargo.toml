@@ -1,0 +1,25 @@
+[package]
+name = "bronzite-client"
+version = "0.1.0"
+edition = "2024"
+description = "🔮 Client library for querying the Bronzite compile-time reflection daemon from proc-macros"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/drewridley/bronzite"
+homepage = "https://github.com/drewridley/bronzite"
+documentation = "https://docs.rs/bronzite-client"
+readme = "../../README.md"
+keywords = ["reflection", "proc-macro", "compile-time", "type-system", "introspection"]
+categories = ["development-tools::procedural-macro-helpers", "rust-patterns"]
+authors = ["Drew Ridley"]
+
+[dependencies]
+bronzite-types = { path = "../bronzite-types", version = "0.1.0" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "2"
+
+[target.'cfg(unix)'.dependencies]
+# Unix domain sockets are in std
+
+[target.'cfg(windows)'.dependencies]
+# Windows named pipes are in std
