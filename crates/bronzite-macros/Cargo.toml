@@ -1,6 +1,6 @@
 [package]
 name = "bronzite-macros"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 description = "🔮 Proc-macros for Bronzite compile-time type reflection - inspect traits, fields, and methods at compile time"
 license = "MIT OR Apache-2.0"
@@ -16,8 +16,8 @@ authors = ["Drew Ridley"]
 proc-macro = true
 
 [dependencies]
-bronzite-client = { path = "../bronzite-client", version = "0.1.0" }
-bronzite-types = { path = "../bronzite-types", version = "0.1.0" }
+bronzite-client = { path = "../bronzite-client", version = "0.2.0" }
+bronzite-types = { path = "../bronzite-types", version = "0.2.0" }
 proc-macro2 = "1.0"
 quote = "1.0"
 syn = { version = "2.0", features = ["full", "parsing"] }

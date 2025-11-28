@@ -1,6 +1,6 @@
-//! Example proc-macro crate demonstrating Bronzite compile-time reflection.
+//! Example proc-macro crate demonstrating Bronzite's new high-level reflection API.
 //!
-//! This crate shows how to use bronzite-client to query type information
+//! This crate shows how to use the ergonomic `Crate` API to query type information
 //! at compile time from within a proc-macro.
 
 use proc_macro::TokenStream;
@@ -9,17 +9,14 @@ use quote::quote;
 
 /// Generate a list of trait implementations for a type.
 ///
-/// This macro queries the Bronzite daemon to discover which traits
+/// This macro uses the new high-level API to discover which traits
 /// a type implements, then generates code to expose that information.
 ///
 /// # Usage
 ///
 /// ```ignore
-/// // In your types crate, define some types with trait impls
-/// // Then in your application:
-///
 /// list_trait_impls!("my_types", User);
-/// // Expands to something like:
+/// // Expands to:
 /// // const USER_TRAITS: &[&str] = &["Serialize", "HasId", "Debug", "Clone"];
 /// ```
 #[proc_macro]
@@ -37,32 +34,40 @@ pub fn list_trait_impls(input: TokenStream) -> TokenStream {
     let crate_name = parts[0].trim_matches('"');
     let type_name = parts[1].trim();
 
-    // Ensure daemon is running and connect
-    match bronzite_client::connect_or_start(None) {
-        Ok(mut client) => {
-            match client.get_trait_impls(crate_name, type_name) {
-                Ok(impls) => {
-                    let trait_names: Vec<String> = impls
-                        .iter()
-                        .map(|i| {
-                            // Extract just the trait name from the full path
-                            i.trait_path
-                                .rsplit("::")
-                                .next()
-                                .unwrap_or(&i.trait_path)
-                                .to_string()
-                        })
-                        .collect();
+    // Use the new high-level API
+    match bronzite_client::Crate::reflect(crate_name) {
+        Ok(krate) => {
+            match krate.get_struct(type_name) {
+                Ok(struct_def) => {
+                    match struct_def.trait_impls() {
+                        Ok(impls) => {
+                            let trait_names: Vec<String> = impls
+                                .iter()
+                                .map(|i| {
+                                    // Extract just the trait name from the full path
+                                    i.trait_path
+                                        .rsplit("::")
+                                        .next()
+                                        .unwrap_or(&i.trait_path)
+                                        .to_string()
+                                })
+                                .collect();
 
-                    let const_name = syn::Ident::new(
-                        &format!("{}_TRAITS", type_name.to_uppercase()),
-                        proc_macro2::Span::call_site(),
-                    );
+                            let const_name = syn::Ident::new(
+                                &format!("{}_TRAITS", type_name.to_uppercase()),
+                                proc_macro2::Span::call_site(),
+                            );
 
-                    let output = quote! {
-                        const #const_name: &[&str] = &[#(#trait_names),*];
-                    };
-                    output.into()
+                            let output = quote! {
+                                const #const_name: &[&str] = &[#(#trait_names),*];
+                            };
+                            output.into()
+                        }
+                        Err(e) => {
+                            let msg = format!("Failed to get trait impls: {}", e);
+                            quote! { compile_error!(#msg) }.into()
+                        }
+                    }
                 }
                 Err(e) => {
                     let msg = format!("Bronzite query failed: {}", e);
@@ -83,8 +88,8 @@ pub fn list_trait_impls(input: TokenStream) -> TokenStream {
 
 /// Generate field accessor methods for a struct.
 ///
-/// This macro queries Bronzite for the fields of a struct and generates
-/// getter methods for each field.
+/// This macro uses the new high-level API to query struct fields and generate
+/// getter methods. It demonstrates navigation from struct -> fields -> field types.
 ///
 /// # Usage
 ///
@@ -114,41 +119,50 @@ pub fn generate_getters(input: TokenStream) -> TokenStream {
     let type_name = parts[1].trim();
     let field_access = syn::Ident::new(parts[2].trim(), proc_macro2::Span::call_site());
 
-    match bronzite_client::connect_or_start(None) {
-        Ok(mut client) => match client.get_fields(crate_name, type_name) {
-            Ok(fields) => {
-                let getters: Vec<TokenStream2> = fields
-                    .iter()
-                    .filter_map(|f| {
-                        let field_name = f.name.as_ref()?;
-                        let field_ident =
-                            syn::Ident::new(field_name, proc_macro2::Span::call_site());
-                        let ty_str = &f.ty;
+    match bronzite_client::Crate::reflect(crate_name) {
+        Ok(krate) => {
+            match krate.get_struct(type_name) {
+                Ok(struct_def) => {
+                    match struct_def.fields() {
+                        Ok(fields) => {
+                            let getters: Vec<TokenStream2> = fields
+                                .iter()
+                                .filter_map(|f| {
+                                    let field_name = f.name.as_ref()?;
+                                    let field_ident =
+                                        syn::Ident::new(field_name, proc_macro2::Span::call_site());
+                                    let ty_str = &f.ty;
 
-                        // Parse the type - simplified, just use the string as-is
-                        // In a real impl you'd want proper type parsing
-                        let ty: TokenStream2 = ty_str.parse().unwrap_or_else(|_| {
-                            quote! { _ }
-                        });
+                                    // Parse the type - simplified, just use the string as-is
+                                    let ty: TokenStream2 = ty_str.parse().unwrap_or_else(|_| {
+                                        quote! { _ }
+                                    });
 
-                        Some(quote! {
-                            pub fn #field_ident(&self) -> &#ty {
-                                &self.#field_access.#field_ident
-                            }
-                        })
-                    })
-                    .collect();
+                                    Some(quote! {
+                                        pub fn #field_ident(&self) -> &#ty {
+                                            &self.#field_access.#field_ident
+                                        }
+                                    })
+                                })
+                                .collect();
 
-                let output = quote! {
-                    #(#getters)*
-                };
-                output.into()
+                            let output = quote! {
+                                #(#getters)*
+                            };
+                            output.into()
+                        }
+                        Err(e) => {
+                            let msg = format!("Failed to get fields: {}", e);
+                            quote! { compile_error!(#msg) }.into()
+                        }
+                    }
+                }
+                Err(e) => {
+                    let msg = format!("Bronzite query failed: {}", e);
+                    quote! { compile_error!(#msg) }.into()
+                }
             }
-            Err(e) => {
-                let msg = format!("Bronzite query failed: {}", e);
-                quote! { compile_error!(#msg) }.into()
-            }
-        },
+        }
         Err(e) => {
             let msg = format!("Failed to connect to Bronzite daemon: {}", e);
             quote! { compile_error!(#msg) }.into()
@@ -158,7 +172,7 @@ pub fn generate_getters(input: TokenStream) -> TokenStream {
 
 /// Check if a type implements a specific trait.
 ///
-/// Returns `true` or `false` as a literal.
+/// Returns `true` or `false` as a literal. Uses the convenient `.implements()` method.
 ///
 /// # Usage
 ///
@@ -181,15 +195,21 @@ pub fn implements_trait(input: TokenStream) -> TokenStream {
     let type_name = parts[1].trim();
     let trait_name = parts[2].trim().trim_matches('"');
 
-    match bronzite_client::connect_or_start(None) {
-        Ok(mut client) => match client.check_impl(crate_name, type_name, trait_name) {
-            Ok((implements, _)) => {
-                if implements {
-                    quote! { true }.into()
-                } else {
-                    quote! { false }.into()
+    match bronzite_client::Crate::reflect(crate_name) {
+        Ok(krate) => match krate.get_struct(type_name) {
+            Ok(struct_def) => match struct_def.implements(trait_name) {
+                Ok(implements) => {
+                    if implements {
+                        quote! { true }.into()
+                    } else {
+                        quote! { false }.into()
+                    }
                 }
-            }
+                Err(e) => {
+                    let msg = format!("Failed to check impl: {}", e);
+                    quote! { compile_error!(#msg) }.into()
+                }
+            },
             Err(e) => {
                 let msg = format!("Bronzite query failed: {}", e);
                 quote! { compile_error!(#msg) }.into()
@@ -203,6 +223,8 @@ pub fn implements_trait(input: TokenStream) -> TokenStream {
 }
 
 /// Get the method names from a type's inherent impl.
+///
+/// Uses the `.methods()` navigation API to get all methods.
 ///
 /// # Usage
 ///
@@ -225,25 +247,28 @@ pub fn list_methods(input: TokenStream) -> TokenStream {
     let crate_name = parts[0].trim_matches('"');
     let type_name = parts[1].trim();
 
-    match bronzite_client::connect_or_start(None) {
-        Ok(mut client) => match client.get_inherent_impls(crate_name, type_name) {
-            Ok(impls) => {
-                let method_names: Vec<String> = impls
-                    .iter()
-                    .flat_map(|i| i.methods.iter())
-                    .map(|m| m.name.clone())
-                    .collect();
+    match bronzite_client::Crate::reflect(crate_name) {
+        Ok(krate) => match krate.get_struct(type_name) {
+            Ok(struct_def) => match struct_def.methods() {
+                Ok(methods) => {
+                    let method_names: Vec<String> =
+                        methods.iter().map(|m| m.name.clone()).collect();
 
-                let const_name = syn::Ident::new(
-                    &format!("{}_METHODS", type_name.to_uppercase()),
-                    proc_macro2::Span::call_site(),
-                );
+                    let const_name = syn::Ident::new(
+                        &format!("{}_METHODS", type_name.to_uppercase()),
+                        proc_macro2::Span::call_site(),
+                    );
 
-                let output = quote! {
-                    const #const_name: &[&str] = &[#(#method_names),*];
-                };
-                output.into()
-            }
+                    let output = quote! {
+                        const #const_name: &[&str] = &[#(#method_names),*];
+                    };
+                    output.into()
+                }
+                Err(e) => {
+                    let msg = format!("Failed to get methods: {}", e);
+                    quote! { compile_error!(#msg) }.into()
+                }
+            },
             Err(e) => {
                 let msg = format!("Bronzite query failed: {}", e);
                 quote! { compile_error!(#msg) }.into()

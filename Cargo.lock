@@ -63,7 +63,7 @@ dependencies = [
 
 [[package]]
 name = "bronzite"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "bronzite-client",
  "bronzite-macros",
@@ -72,7 +72,7 @@ dependencies = [
 
 [[package]]
 name = "bronzite-client"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "bronzite-types",
  "serde",
@@ -82,7 +82,7 @@ dependencies = [
 
 [[package]]
 name = "bronzite-daemon"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "bronzite-types",
  "clap",
@@ -94,7 +94,7 @@ dependencies = [
 
 [[package]]
 name = "bronzite-macros"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "bronzite-client",
  "bronzite-types",
@@ -105,7 +105,7 @@ dependencies = [
 
 [[package]]
 name = "bronzite-query"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "bronzite-types",
  "clap",
@@ -118,7 +118,7 @@ dependencies = [
 
 [[package]]
 name = "bronzite-types"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "serde",
  "serde_json",

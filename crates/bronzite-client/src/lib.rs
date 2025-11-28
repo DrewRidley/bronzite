@@ -1,11 +1,32 @@
 //! Client library for querying the Bronzite type system daemon from proc-macros.
 //!
-//! This crate provides a simple API for proc-macros to query type information
-//! from a running Bronzite daemon. The daemon compiles the crate once and caches
-//! the type information, allowing many proc-macro invocations to share the same
-//! compilation result.
+//! This crate provides both a low-level RPC client and a high-level reflection API
+//! for compile-time type introspection.
 //!
-//! # Example
+//! # High-Level Reflection API (Recommended)
+//!
+//! ```ignore
+//! use bronzite_client::Crate;
+//!
+//! // Reflect on a crate
+//! let krate = Crate::reflect("my_crate")?;
+//!
+//! // Query items with patterns
+//! let items = krate.items("bevy::prelude::*")?;
+//!
+//! // Get a specific struct and explore it
+//! let user = krate.get_struct("User")?;
+//! for field in user.fields()? {
+//!     println!("{}: {}", field.name.unwrap_or_default(), field.ty);
+//! }
+//!
+//! // Check trait implementations
+//! if user.implements("Debug")? {
+//!     println!("User implements Debug");
+//! }
+//! ```
+//!
+//! # Low-Level Client API
 //!
 //! ```ignore
 //! use bronzite_client::{BronziteClient, ensure_daemon_running};
@@ -66,6 +87,7 @@ static REQUEST_ID: AtomicU64 = AtomicU64::new(1);
 const DEFAULT_DAEMON_TIMEOUT: Duration = Duration::from_secs(30);
 
 /// A client for communicating with the Bronzite daemon.
+#[derive(Debug)]
 pub struct BronziteClient {
     #[cfg(unix)]
     stream: UnixStream,
@@ -585,3 +607,15 @@ mod tests {
         let _ = find_daemon_binary();
     }
 }
+
+// ============================================================================
+// High-Level Reflection API
+// ============================================================================
+
+pub mod reflection;
+
+// Re-export the main types for convenient access
+pub use reflection::{
+    Crate, EnumDef, Field, Item, Method, StructDef, TraitDef, TraitImpl, TraitMethod, TypeAliasDef,
+    UnionDef,
+};
