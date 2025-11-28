@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2025-11-28
+
+### Improved
+
+#### Documentation
+- **Comprehensive doc comments** added to all public API methods
+- **Main crate documentation** completely overhauled to showcase v0.2 API
+- **Method-level examples** added throughout the reflection API
+- **Navigation examples** demonstrating fluent type exploration
+- **Better organization** of re-exports and module documentation
+- All documentation builds without warnings
+
+#### Specific Improvements
+- `Crate` struct methods now have detailed examples
+- `StructDef`, `EnumDef`, `TraitDef` methods documented with usage examples
+- `Field::type_def()` and `Method::return_type_def()` navigation examples
+- `TraitImpl::trait_def()` with navigation example
+- Main `lib.rs` showcases pattern matching, navigation, and best practices
+- API overview and use cases documented in crate root
+
+### Changed
+- Main crate documentation now emphasizes the high-level v0.2 API over v0.1 examples
+
+---
+
 ## [0.2.0] - 2025-11-28
 
 ### 🎉 Major API Redesign

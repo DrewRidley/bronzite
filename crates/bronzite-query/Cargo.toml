@@ -1,6 +1,6 @@
 [package]
 name = "bronzite-query"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2024"
 description = "🔮 Rustc plugin for Bronzite compile-time reflection - extracts type information from Rust code"
 license = "MIT OR Apache-2.0"
@@ -17,7 +17,7 @@ rustc_private = true
 
 [dependencies]
 rustc_plugin = "0.14.3-nightly-2025-08-20"
-bronzite-types = { path = "../bronzite-types", version = "0.2.0" }
+bronzite-types = { path = "../bronzite-types", version = "0.2.1" }
 env_logger = { version = "0.10", default-features = false }
 clap = { version = "4.4", features = ["derive"] }
 serde = { version = "1", features = ["derive"] }

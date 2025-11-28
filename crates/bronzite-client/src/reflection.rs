@@ -334,7 +334,25 @@ impl StructDef {
         })
     }
 
-    /// Get the struct's fields.
+    /// Get all fields of this struct.
+    ///
+    /// Returns a vector of [`Field`] objects, each representing a field in the struct.
+    /// Fields include metadata like name, type, visibility, size, and offset.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// let user = krate.get_struct("User")?;
+    /// for field in user.fields()? {
+    ///     println!("Field: {} of type {}",
+    ///         field.name.as_deref().unwrap_or("<unnamed>"),
+    ///         field.ty
+    ///     );
+    ///     if let Some(size) = field.size {
+    ///         println!("  Size: {} bytes", size);
+    ///     }
+    /// }
+    /// ```
     pub fn fields(&self) -> Result<Vec<Field>> {
         let fields = self
             .client_mut()?
@@ -345,7 +363,22 @@ impl StructDef {
             .collect())
     }
 
-    /// Get trait implementations for this struct.
+    /// Get all trait implementations for this struct.
+    ///
+    /// Returns a vector of [`TraitImpl`] objects containing information about each
+    /// trait implementation, including methods, associated types, and source code.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// let user = krate.get_struct("User")?;
+    /// for impl_block in user.trait_impls()? {
+    ///     println!("Implements: {}", impl_block.trait_path);
+    ///     for method in impl_block.methods() {
+    ///         println!("  - {}", method.name);
+    ///     }
+    /// }
+    /// ```
     pub fn trait_impls(&self) -> Result<Vec<TraitImpl>> {
         let impls = self
             .client_mut()?
@@ -357,6 +390,25 @@ impl StructDef {
     }
 
     /// Check if this struct implements a specific trait.
+    ///
+    /// This is a convenient way to test for trait implementation without
+    /// fetching all trait impls.
+    ///
+    /// # Arguments
+    ///
+    /// * `trait_path` - The trait path to check (e.g., "Debug", "std::fmt::Display")
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// let user = krate.get_struct("User")?;
+    /// if user.implements("Debug")? {
+    ///     println!("User can be debug-printed");
+    /// }
+    /// if user.implements("std::clone::Clone")? {
+    ///     println!("User can be cloned");
+    /// }
+    /// ```
     pub fn implements(&self, trait_path: &str) -> Result<bool> {
         let (implements, _) =
             self.client_mut()?
@@ -365,6 +417,25 @@ impl StructDef {
     }
 
     /// Get inherent methods (from `impl StructName { ... }` blocks).
+    ///
+    /// Returns methods defined in inherent impl blocks, not trait implementations.
+    /// Each [`Method`] includes the signature, body source, and navigation to
+    /// parameter/return types.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// let user = krate.get_struct("User")?;
+    /// for method in user.methods()? {
+    ///     println!("Method: {}", method.signature);
+    ///     if let Some(body) = &method.body_source {
+    ///         println!("  Implementation: {}", body);
+    ///     }
+    ///     if let Some(ret_type) = method.return_type_def()? {
+    ///         println!("  Returns: {}", ret_type.name());
+    ///     }
+    /// }
+    /// ```
     pub fn methods(&self) -> Result<Vec<Method>> {
         let impls = self
             .client_mut()?
@@ -380,7 +451,20 @@ impl StructDef {
             .collect())
     }
 
-    /// Get memory layout information.
+    /// Get memory layout information for this struct.
+    ///
+    /// Returns [`LayoutInfo`] containing size, alignment, field offsets,
+    /// and auto-trait implementations (Send, Sync, Copy).
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// let user = krate.get_struct("User")?;
+    /// let layout = user.layout()?;
+    /// println!("Size: {} bytes", layout.size);
+    /// println!("Alignment: {} bytes", layout.align);
+    /// println!("Is Copy: {}", layout.is_copy);
+    /// ```
     pub fn layout(&self) -> Result<LayoutInfo> {
         self.client_mut()?.get_layout(&self.crate_name, &self.path)
     }
@@ -767,7 +851,32 @@ impl Field {
         }
     }
 
-    /// Get the type definition for this field's type.
+    /// Navigate to the type definition for this field's type.
+    ///
+    /// Returns an [`Item`] representing the field's type definition, if it
+    /// can be resolved. Returns `None` for primitive types or external types
+    /// not in the queried crate.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// let user = krate.get_struct("User")?;
+    /// for field in user.fields()? {
+    ///     if let Some(field_type) = field.type_def()? {
+    ///         match field_type {
+    ///             Item::Struct(s) => println!("{} is a struct", field.name.unwrap()),
+    ///             Item::Enum(e) => println!("{} is an enum", field.name.unwrap()),
+    ///             _ => {}
+    ///         }
+    ///     }
+    /// }
+    /// ```
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(Some(Item))` - The type definition was found
+    /// - `Ok(None)` - The type is primitive or external
+    /// - `Err(_)` - An error occurred querying the daemon
     pub fn type_def(&self) -> Result<Option<Item>> {
         let type_path = self.resolved_ty.as_ref().unwrap_or(&self.ty);
 
@@ -827,7 +936,20 @@ impl TraitImpl {
         }
     }
 
-    /// Get the trait definition being implemented.
+    /// Navigate to the trait definition being implemented.
+    ///
+    /// Returns the [`TraitDef`] for the trait that this impl block implements.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// let user = krate.get_struct("User")?;
+    /// for impl_block in user.trait_impls()? {
+    ///     let trait_def = impl_block.trait_def()?;
+    ///     println!("Implements trait: {}", trait_def.name);
+    ///     println!("Trait has {} methods", trait_def.methods().len());
+    /// }
+    /// ```
     pub fn trait_def(&self) -> Result<TraitDef> {
         let details = self
             .client_mut()?
@@ -928,7 +1050,28 @@ impl Method {
         }
     }
 
-    /// Get the return type as an Item if it's a known type.
+    /// Navigate to the return type definition.
+    ///
+    /// Returns an [`Item`] representing the method's return type definition,
+    /// if it can be resolved. Returns `None` if the method returns `()`, or
+    /// if the type is primitive or external.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// let user = krate.get_struct("User")?;
+    /// for method in user.methods()? {
+    ///     if let Some(return_type) = method.return_type_def()? {
+    ///         println!("{} returns {}", method.name, return_type.name());
+    ///     }
+    /// }
+    /// ```
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(Some(Item))` - The return type definition was found
+    /// - `Ok(None)` - No return type, or primitive/external type
+    /// - `Err(_)` - An error occurred querying the daemon
     pub fn return_type_def(&self) -> Result<Option<Item>> {
         if let Some(return_ty) = &self.parsed_signature.return_ty {
             match self.client_mut()?.get_type(&self.crate_name, return_ty) {
@@ -952,7 +1095,31 @@ impl Method {
         }
     }
 
-    /// Get parameter type definitions.
+    /// Navigate to parameter type definitions.
+    ///
+    /// Returns a vector of optional [`Item`]s, one for each parameter.
+    /// Each entry is `Some(Item)` if the type can be resolved, or `None`
+    /// for primitive/external types.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// let user = krate.get_struct("User")?;
+    /// for method in user.methods()? {
+    ///     println!("Method: {}", method.name);
+    ///     for (i, param_type) in method.param_types()?.into_iter().enumerate() {
+    ///         if let Some(ptype) = param_type {
+    ///             println!("  Param {}: {}", i, ptype.name());
+    ///         }
+    ///     }
+    /// }
+    /// ```
+    ///
+    /// # Returns
+    ///
+    /// A vector where each element corresponds to a parameter:
+    /// - `Some(Item)` - The parameter type was found
+    /// - `None` - The type is primitive or external
     pub fn param_types(&self) -> Result<Vec<Option<Item>>> {
         self.parsed_signature
             .params
